@@ -1,40 +1,36 @@
-# まずは道具箱から、music21っていう便利な道具を取り出す
-from music21 import *
+# 道具箱から、yt_dlpっていう新しい道具を取り出す
+import yt_dlp
 
 # ----------------------------------------------------
 
-# 分析したいコード進行をリストとして用意する
-# ここを好きなコード進行に変えて遊んでみてね
-chord_progression = ['a', 'd', 'E7', 'a']
+# ダウンロードしたいYouTube動画のURL
+# まずは練習で、短い動画のURLをここに貼ってみよう
+youtube_url = 'https://www.youtube.com/watch?v=bTtZ600zer0' # ← あとで好きなURLに変えてみてね
+
+# ダウンロードするときの設定をいろいろ決める
+# ここでは「音声だけ」「mp3形式で」「'downloaded_audio'っていう名前で」保存してね、とお願いしてる
+ydl_opts = {
+    'format': 'bestaudio/best',
+    'outtmpl': 'downloaded_audio.%(ext)s', # 保存するファイル名
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3', # mp3形式に変換
+        'preferredquality': '192', # 音質
+    }],
+}
 
 # ----------------------------------------------------
 
-# music21がわかるように、コードを楽譜データに変換していく
-chord_stream = stream.Stream()
-for c_name in chord_progression:
-    # 1個ずつコードを楽譜に追加していく
-    chord_stream.append(chord.Chord(c_name))
+# いよいよダウンロードを実行！
+print(f"'{youtube_url}' から音声をダウンロードするよ…")
 
-# ----------------------------------------------------
+try:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([youtube_url])
+    print("---------------------------------")
+    print("ダウンロード完了！ フォルダの中にmp3ファイルができたか確認してみてね。")
 
-# いよいよ分析！「この楽譜のキーを教えて！」ってお願いする
-key = chord_stream.analyze('key')
-
-# ----------------------------------------------------
-
-# 結果を表示する
-print(f"分析したコード進行: {chord_progression}")
-print("---------------------------------")
-print(f"このコード進行、たぶん… {key.tonic.name} {key.mode} だね！")
-print("---------------------------------")
-print("各コードの役割（ディグリー）はこんな感じ：")
-
-for c_name in chord_progression:
-    # ★まず、ちゃんとコードの形に変換してあげる
-    current_chord = chord.Chord(c_name)
-    
-    # ★その上で、「このコードの役割は？」って聞く
-    roman_numeral = roman.romanNumeralFromChord(current_chord, key)
-    
-    # ちょっと見た目を整えて表示する
-    print(f"  {c_name.ljust(5)} -> {roman_numeral.figure}")
+except Exception as e:
+    print("---------------------------------")
+    print("ありゃ、ダウンロード中にエラーが起きちゃったみたい…。")
+    print(f"エラー内容: {e}")
