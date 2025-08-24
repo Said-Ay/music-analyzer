@@ -1,44 +1,71 @@
+# --- 必要な道具だけを、道具箱から取り出す ---
 import yt_dlp
-import subprocess # 新しい道具！Pythonの中からコマンドを実行する子
+import subprocess
+import os
 
 # ----------------------------------------------------
+# ★ 機能ごとに、整理箱（関数）を用意する ★
+# ----------------------------------------------------
 
-# ダウンロードしたいYouTube動画のURL
-youtube_url = 'https://www.youtube.com/watch?v=Fqz_s4sr-5M' # ← 好きなURLに変えてみてね
-
-# ダウンロード設定
-# ファイル名は 'audio.mp3' にしておく
-output_filename = 'audio'
-ydl_opts = {
-    'format': 'bestaudio/best',
-    'outtmpl': output_filename,
-    'postprocessors': [{
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192',
-    }],
-}
-
-# --- YouTubeから音声ダウンロード ---
-print(f"'{youtube_url}' から音声をダウンロード中…")
-try:
+def download_from_youtube(url, output_filename="audio.mp3"):
+    """YouTubeから音声をダウンロードする専門家"""
+    print(f"'{url}' から音声をダウンロード中…")
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': os.path.splitext(output_filename)[0], # 'audio.mp3' -> 'audio'
+        'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}],
+        'noplaylist': True # プレイリストの場合は最初の1曲だけにする
+    }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([youtube_url])
+        ydl.download([url])
     print("ダウンロード完了！")
-except Exception as e:
-    print(f"ダウンロード中にエラー発生: {e}")
-    exit() # エラーが起きたらここで終了
+    return output_filename
 
-# --- ここからdemucsを使った楽器分析 ---
-print("---------------------------------")
-print("次に、楽器の分析（音源分離）を始めるよ…（ちょっと時間がかかるかも）")
+def separate_instruments(audio_path):
+    """demucsで楽器を分離する専門家"""
+    print("---------------------------------")
+    print("楽器の分析（音源分離）を開始…（曲の長さによっては、結構時間がかかるよ）")
+    output_folder = "separated"
+    absolute_audio_path = os.path.abspath(audio_path)
+    
+    command = ["py", "-m", "demucs", "--mp3", "-o", output_folder, absolute_audio_path]
+    subprocess.run(command)
+    print("音源分離完了！")
+    
+    # 分離されたファイルが入っているフォルダのパスを確認
+    input_filename_stem = os.path.splitext(os.path.basename(audio_path))[0]
+    result_folder = os.path.join(output_folder, "htdemucs", input_filename_stem)
+    
+    if os.path.exists(result_folder):
+        print(f"\n🎉🎉🎉 おめでとう！ 🎉🎉🎉")
+        print(f"'{result_folder}' の中に、パート別の音楽ファイルが保存されたよ。")
+    else:
+        print("\nあれ？分離されたファイルが見つからないみたい…。")
+        print("demucsのバージョンによっては、出力フォルダの構造が違うことがあるかも。")
 
-# demucsを実行するコマンドを組み立てる
-# 「demucsを起動して、『separated』フォルダに結果を出力してね。対象ファイルは『audio.mp3』だよ」
-command = ["py", "-m", "demucs", "-o", "separated", "audio.mp3"]
+# ----------------------------------------------------
+# ★ メインの指揮者 ★
+# ----------------------------------------------------
 
-# コマンドを実行
-subprocess.run(command)
+def main():
+    """
+    プログラム全体の流れを指揮する、メインの関数。
+    """
+    # 1. ユーザーに質問する
+    youtube_url = input("楽器を分離したいYouTube動画URLを貼り付けてください: ")
+    print("---------------------------------")
 
-print("---------------------------------")
-print("分析完了！ 左のファイル一覧に'separated'フォルダができたか確認してみて！")
+    # 2. YouTubeからダウンロードする
+    downloaded_file = download_from_youtube(youtube_url)
+
+    # 3. 楽器を分離する
+    separate_instruments(downloaded_file)
+
+    print("---------------------------------")
+    print("すべての処理が完了しました！")
+
+
+# --- このプログラムが実行されたら、まずここが呼ばれる ---
+if __name__ == "__main__":
+    main()
+
